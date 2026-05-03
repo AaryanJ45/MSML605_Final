@@ -1,3 +1,4 @@
+import inspect
 import os
 import re
 import logging
@@ -111,8 +112,11 @@ def predict(text: str, model_key: str) -> dict:
         padding="max_length",
     )
 
+    accepted = inspect.signature(model.forward).parameters
+    model_inputs = {k: v for k, v in inputs.items() if k in accepted}
+
     with torch.no_grad():
-        logits = model(**inputs).logits
+        logits = model(**model_inputs).logits
 
     probs = torch.softmax(logits, dim=1).squeeze().tolist()
     pred_idx = int(torch.argmax(logits, dim=1).item())
