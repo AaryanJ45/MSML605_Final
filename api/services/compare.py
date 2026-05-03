@@ -49,37 +49,48 @@ def _compare_worker(job_id: str, model_a: str, model_b: str, local: bool) -> Non
     python = sys.executable
     local_flags = ["--local"] if local else []
 
+    results: dict[str, tuple[int, list[str]]] = {}
+    errors:  dict[str, Exception] = {}
+
+    def _eval(model: str) -> None:
+        try:
+            rc, lines = _exec(
+                job_id,
+                [python, "test.py", "--model", model, "--model-path", f"saved_models/{model}"]
+                + local_flags,
+                model,
+            )
+            results[model] = (rc, lines)
+        except Exception as exc:
+            errors[model] = exc
+
     with _compare_lock:
         try:
-            # ── Model A ──────────────────────────────────────────────────────
             with _lock:
-                COMPARE_JOBS[job_id]["status"] = "evaluating_a"
-            _log(job_id, f"[compare] ── Evaluating {model_a.upper()} ──")
-            rc_a, lines_a = _exec(
-                job_id,
-                [python, "test.py", "--model", model_a, "--model-path", f"saved_models/{model_a}"]
-                + local_flags,
-                model_a,
-            )
+                COMPARE_JOBS[job_id]["status"] = "evaluating"
+            _log(job_id, f"[compare] ── Evaluating {model_a.upper()} and {model_b.upper()} in parallel ──")
+
+            t_a = threading.Thread(target=_eval, args=(model_a,), daemon=True)
+            t_b = threading.Thread(target=_eval, args=(model_b,), daemon=True)
+            t_a.start()
+            t_b.start()
+            t_a.join()
+            t_b.join()
+
+            if errors:
+                _fail(job_id, f"Unexpected error during evaluation: {next(iter(errors.values()))}")
+                return
+
+            rc_a, lines_a = results[model_a]
+            rc_b, lines_b = results[model_b]
+
             if rc_a != 0:
                 _fail(job_id, f"Evaluation of '{model_a}' failed — check that the model has been trained first.")
                 return
-
-            # ── Model B ──────────────────────────────────────────────────────
-            with _lock:
-                COMPARE_JOBS[job_id]["status"] = "evaluating_b"
-            _log(job_id, f"[compare] ── Evaluating {model_b.upper()} ──")
-            rc_b, lines_b = _exec(
-                job_id,
-                [python, "test.py", "--model", model_b, "--model-path", f"saved_models/{model_b}"]
-                + local_flags,
-                model_b,
-            )
             if rc_b != 0:
                 _fail(job_id, f"Evaluation of '{model_b}' failed — check that the model has been trained first.")
                 return
 
-            # ── Done ─────────────────────────────────────────────────────────
             with _lock:
                 COMPARE_JOBS[job_id].update(
                     {
