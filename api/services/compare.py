@@ -67,7 +67,7 @@ def _compare_worker(job_id: str, model_a: str, model_b: str, local: bool) -> Non
     with _compare_lock:
         try:
             with _lock:
-                COMPARE_JOBS[job_id]["status"] = "evaluating"
+                COMPARE_JOBS[job_id]["status"] = "evaluating_a"
             _log(job_id, f"[compare] ── Evaluating {model_a.upper()} and {model_b.upper()} in parallel ──")
 
             t_a = threading.Thread(target=_eval, args=(model_a,), daemon=True)
