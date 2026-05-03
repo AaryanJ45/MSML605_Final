@@ -20,16 +20,12 @@ def clean_text(text):
 
 # Function to Load data
 def load_data(local, bucket=None, file_name=None):
-    # If we are running from local computer, load the data from local file system
-    if local:
-        print("Loading from local")
-        df = pd.read_csv(file_name)
-    # If we are running from cloud, load the data from S3 bucket
-    else:
-        print("Loading from S3 bucket")
-        s3 = boto3.client('s3')
-        obj = s3.get_object(Bucket=bucket, Key=file_name)
-        df = pd.read_csv(obj['Body'])
+    if not bucket:
+        raise ValueError("BUCKET must be set — source data is always loaded from S3.")
+    print(f"Loading from S3 bucket: s3://{bucket}/{file_name}")
+    s3 = boto3.client('s3')
+    obj = s3.get_object(Bucket=bucket, Key=file_name)
+    df = pd.read_csv(obj['Body'])
     return df
 
 # Function to save the preprocessed data, call at the end of preprocessing
