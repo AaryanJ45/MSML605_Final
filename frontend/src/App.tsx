@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import ResultCard from "./components/ResultCard";
 import CompareTab from "./components/CompareTab";
+import { apiUrl } from "./api";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -210,7 +211,7 @@ function ClassifyTab() {
     setError(null);
     setResult(null);
     try {
-      const res = await fetch("/predict", {
+      const res = await fetch(apiUrl("/predict"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, model }),
@@ -343,7 +344,7 @@ function TrainTab() {
   const pollRef    = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    fetch("/jobs").then(r => r.json()).then(setPastJobs).catch(() => {});
+    fetch(apiUrl("/jobs")).then(r => r.json()).then(setPastJobs).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -353,12 +354,12 @@ function TrainTab() {
     }
     pollRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/jobs/${activeJob.job_id}`);
+        const res = await fetch(apiUrl(`/jobs/${activeJob.job_id}`));
         const updated: Job = await res.json();
         setActiveJob(updated);
         if (updated.status === "completed" || updated.status === "failed") {
           clearInterval(pollRef.current!);
-          fetch("/jobs").then(r => r.json()).then(setPastJobs).catch(() => {});
+          fetch(apiUrl("/jobs")).then(r => r.json()).then(setPastJobs).catch(() => {});
         }
       } catch { /* keep polling */ }
     }, 2000);
@@ -377,7 +378,7 @@ function TrainTab() {
     setError(null);
     setActiveJob(null);
     try {
-      const res = await fetch("/jobs/run", {
+      const res = await fetch(apiUrl("/jobs/run"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model_id: modelId.trim(), local: true, mode: pipelineMode }),
@@ -387,7 +388,7 @@ function TrainTab() {
         throw new Error(body.detail ?? `Error ${res.status}`);
       }
       const { job_id } = await res.json();
-      const jobRes = await fetch(`/jobs/${job_id}`);
+      const jobRes = await fetch(apiUrl(`/jobs/${job_id}`));
       setActiveJob(await jobRes.json());
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");

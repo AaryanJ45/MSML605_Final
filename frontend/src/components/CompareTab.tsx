@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { apiUrl } from "../api";
 
 type ModelKey = "bert" | "distilbert";
 
@@ -203,7 +204,7 @@ export default function CompareTab() {
 
     pollRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/compare/${job.job_id}`);
+        const res = await fetch(apiUrl(`/compare/${job.job_id}`));
         const updated: CompareJob = await res.json();
         setJob(updated);
         if (updated.status === "completed" || updated.status === "failed") {
@@ -227,7 +228,7 @@ export default function CompareTab() {
     setJob(null);
 
     try {
-      const res = await fetch("/compare/run", {
+      const res = await fetch(apiUrl("/compare/run"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model_a: modelA, model_b: modelB, local: true }),
@@ -239,7 +240,7 @@ export default function CompareTab() {
       }
 
       const { job_id } = await res.json();
-      const jobRes = await fetch(`/compare/${job_id}`);
+      const jobRes = await fetch(apiUrl(`/compare/${job_id}`));
       setJob(await jobRes.json());
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");
