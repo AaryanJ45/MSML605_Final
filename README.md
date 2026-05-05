@@ -78,17 +78,6 @@ The training pipeline supports three modes controlled by environment variables:
 | Preprocess only | `PREPROCESS_ONLY=true` | preprocess → upload splits to S3 → stop |
 | Evaluate only | `SKIP_TRAIN=true` | pull model from S3 → validate → test |
 
-### Running locally
-
-```bash
-MODEL=bert LOCAL=true bash run_pipeline.sh
-```
-
-### Running against S3
-
-```bash
-MODEL=bert LOCAL=false BUCKET=your-bucket-name bash run_pipeline.sh
-```
 
 ---
 
